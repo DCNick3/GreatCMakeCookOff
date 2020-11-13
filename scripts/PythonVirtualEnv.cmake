@@ -80,58 +80,65 @@ if(NOT VIRTUALENV_WAS_CREATED)
     foreach(pypath ${output})
         file(APPEND "${PROJECT_BINARY_DIR}/paths/system.pth" "${pypath}\n")
     endforeach()
-    # Makes sure the path.pth file is picked up
-    execute_process(COMMAND
-        ${_LOCAL_PYTHON_EXECUTABLE} -c "import site; print(site.__file__)"
-        OUTPUT_VARIABLE sitedir
-        ERROR_VARIABLE error
-        RESULT_VARIABLE result
-    )
-    if("${result}" STREQUAL "0")
-        string(STRIP sitedir "${sitedir}")
-        get_filename_component(sitedir "${sitedir}" PATH)
-        file(WRITE "${sitedir}/sitecustomize.py"
-            "from site import addsitedir\n"
-            "addsitedir('${PROJECT_BINARY_DIR}/paths')\n"
-        )
-    else()
-        message("error: ${error}")
-        message("out: ${sitedir}")
-        message(FATAL_ERROR "script failed")
-    endif()
+
 
     set(VIRTUALENV_WAS_CREATED TRUE CACHE INTERNAL "Virtualenv has been created")
 endif()
 
 function(add_package_to_virtualenv PACKAGE)
-    find_python_package(${PACKAGE} LOCAL)
-    if(NOT ${PACKAGE}_FOUND)
-        # First check if we have venv in the same directory as python.
-        # Canopy makes things more difficult.
-        get_filename_component(python_bin "${_LOCAL_PYTHON_EXECUTABLE}" PATH)
-        find_program(local_pip_EXECUTABLE pip PATHS "${python_bin}" NO_DEFAULT_PATH)
-        if(local_pip_EXECUTABLE)
-            execute_process(
+    #find_python_package(${PACKAGE} LOCAL)
+    #if(NOT ${PACKAGE}_FOUND)
+    # First check if we have venv in the same directory as python.
+    # Canopy makes things more difficult.
+    get_filename_component(python_bin "${_LOCAL_PYTHON_EXECUTABLE}" PATH)
+    find_program(local_pip_EXECUTABLE pip PATHS "${python_bin}" NO_DEFAULT_PATH)
+    if(local_pip_EXECUTABLE)
+        execute_process(
                 COMMAND
-                    ${local_pip_EXECUTABLE} install --upgrade ${PACKAGE}
+                ${local_pip_EXECUTABLE} install --upgrade ${PACKAGE}
                 RESULT_VARIABLE result
                 OUTPUT_VARIABLE output
                 ERROR_VARIABLE error
-            )
-        else()
-            execute_process(
+        )
+    else()
+        execute_process(
                 COMMAND ${_LOCAL_PYTHON_EXECUTABLE} -m pip install --upgrade ${PACKAGE}
                 RESULT_VARIABLE result
                 OUTPUT_VARIABLE output
                 ERROR_VARIABLE error
-            )
-        endif()
-        if("${result}" STREQUAL "0")
-            find_python_package(${PACKAGE} LOCAL)
-        else()
-            message("${error}")
-            message("${output}")
-            message(FATAL_ERROR "Could not install ${PACKAGE} -- ${result}")
-        endif()
+        )
+    endif()
+    if(NOT"${result}" STREQUAL "0")
+        message("${error}")
+        message("${output}")
+        message(FATAL_ERROR "Could not install ${PACKAGE} -- ${result}")
+    endif()
+endfunction()
+
+function(add_requirements_to_virtualenv)
+
+
+    get_filename_component(python_bin "${_LOCAL_PYTHON_EXECUTABLE}" PATH)
+    find_program(local_pip_EXECUTABLE pip PATHS "${python_bin}" NO_DEFAULT_PATH)
+    if(local_pip_EXECUTABLE)
+        execute_process(
+                COMMAND
+                ${local_pip_EXECUTABLE} install ${ARGV}
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE output
+                ERROR_VARIABLE error
+        )
+    else()
+        execute_process(
+                COMMAND ${_LOCAL_PYTHON_EXECUTABLE} -m pip install ${ARGV}
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE output
+                ERROR_VARIABLE error
+        )
+    endif()
+    if(NOT"${result}" STREQUAL "0")
+        message("${error}")
+        message("${output}")
+        message(FATAL_ERROR "Could not install ${PACKAGE} -- ${result}")
     endif()
 endfunction()
