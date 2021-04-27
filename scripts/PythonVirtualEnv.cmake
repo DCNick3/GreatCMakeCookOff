@@ -144,3 +144,33 @@ function(add_requirements_to_virtualenv)
         message("Installed ${ARGV}")
     endif()
 endfunction()
+
+function(add_requirements_txt_to_virtualenv)
+
+
+    get_filename_component(python_bin "${_LOCAL_PYTHON_EXECUTABLE}" PATH)
+    find_program(local_pip_EXECUTABLE pip PATHS "${python_bin}" NO_DEFAULT_PATH)
+    if(local_pip_EXECUTABLE)
+        execute_process(
+                COMMAND
+                ${local_pip_EXECUTABLE} install -r ${ARGV}
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE output
+                ERROR_VARIABLE error
+        )
+    else()
+        execute_process(
+                COMMAND ${_LOCAL_PYTHON_EXECUTABLE} -m pip install -r ${ARGV}
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE output
+                ERROR_VARIABLE error
+        )
+    endif()
+    if(NOT "${result}" STREQUAL "0")
+        message("${error}")
+        message("${output}")
+        message(FATAL_ERROR "Could not install requirements from ${ARGV} -- ${result}")
+    else()
+        message("Installed requirements from${ARGV}")
+    endif()
+endfunction()
